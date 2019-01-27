@@ -1,0 +1,88 @@
+<h1 id="evaluation-plan">Evaluation Plan</h1>
+<h2 id="fig.8">Fig.8</h2>
+<ul>
+<li><p>Experiment</p>
+<p>{ctrl, onboard} x {MPTCP, M3-bare, M3} x {512k, 2m, 10m, 100s}</p></li>
+<li><p>Data Processing For Controlled Experiment</p>
+<ul>
+<li><p>Input: mperf log, HSR Trace</p></li>
+<li><p>Output: avg. bandwidth utilization on each trace</p></li>
+</ul></li>
+<li><p>Data Processing For Onboard Experiment</p>
+<ul>
+<li><p>Input: mperf log</p></li>
+<li><p>Output: avg. throughput on each trace</p></li>
+</ul></li>
+</ul>
+<h2 id="fig.9a">Fig.9(a)</h2>
+<ul>
+<li><p>Experiment</p>
+<p>{ctrl, onboard} x {MPTCP, M3-bare, M3} x 100s</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: PCAP</p></li>
+<li><p>Output: thp, RTT(time series per trace)</p></li>
+</ul></li>
+</ul>
+<h2 id="fig.9b">Fig.9(b)</h2>
+<ul>
+<li><p>Experiment</p>
+<p>{ctrl, onboard} x {M3-bare, M3} x 100s</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: PCAP, time difference on relay &amp; proxy, time interval of events</p></li>
+<li><p>Output: delivery delay(time when data can be delivered to user - time when sent) for each packet during each event</p></li>
+</ul></li>
+<li><p>Additional Data Processing For Onboard Version</p>
+<p>computing time difference on relay &amp; proxy(TBD)</p></li>
+</ul>
+<h2 id="fig.10a">Fig.10(a)</h2>
+<ul>
+<li><p>Experiment</p>
+<p>{ctrl, onboard} x {M3-bare, M3-QoE, M3} x 100s surge</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: surge log</p></li>
+<li><p>Output: download time for each page</p></li>
+</ul></li>
+</ul>
+<h2 id="fig.10b">Fig.10(b)</h2>
+<ul>
+<li><p>Experiment</p>
+<p>{ctrl, onboard} x {M3-bare, M3-QoE, M3} x 100s surge</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: PCAP, target data size</p></li>
+<li><p>Output: download time for first (target data size) bytes of each page</p></li>
+</ul></li>
+</ul>
+<h2 id="fig.11">Fig.11</h2>
+<ul>
+<li><p>Experiment</p>
+<p>ctrl x {M3-bare, M3-QoE, M3} x same page requests</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: surge log</p></li>
+<li><p>Output: download time for each page</p></li>
+</ul></li>
+</ul>
+<h2 id="fig.12">Fig.12</h2>
+<ul>
+<li><p>Experiment</p>
+<p>ctrl x M3 x priorized flow with normal bg flows</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: PCAP, HSR trace</p></li>
+<li><p>Output: time series of throughput and aggragated bw</p></li>
+</ul></li>
+</ul>
+<h2 id="fig.13b">Fig.13(b)</h2>
+<ul>
+<li><p>Experiment</p>
+<p>ctrl x M3 x {3 ifs, 6 ifs, 9 ifs} x same page requests</p></li>
+<li><p>Data Processing</p>
+<ul>
+<li><p>Input: surge log, time threshold</p></li>
+<li><p>Output: satisfied users#(page download time &lt;= time threshold)</p></li>
+</ul></li>
+</ul>
