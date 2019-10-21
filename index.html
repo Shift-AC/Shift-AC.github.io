@@ -1,7 +1,127 @@
-<!DOCTYPE html>
-<html>
-<body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
-</body>
-</html>
+<h1 id="compnet.lab3-multipath-http2">CompNet.Lab3: Multipath HTTP/2</h1>
+<p>Due: Dec 9 23:59:59</p>
+<p>[TOC]</p>
+<h2 id="introduction">Introduction</h2>
+<p>In the third lab, you are required to develop an HTTP/2-based downloader, which fetches HTTP objects over multiple network paths. The idea behind this lab originates from the paper <a href=""><em>MP-H2: A Client-only Multipath Solution for HTTP/2</em></a> (Nikravesh et al.). Before starting working on the lab, you are supposed to carefully read the paper for a better understanding of how the downloader functions.</p>
+<p>For simplicity, we won’t implement the downloader on an Android device, as described in the paper. Instead, the downloader will be implemented on the top of an HTTP/2 library in the C programming language. Also, to make things more comfortable, we omit the DNS lookup here, and the IP addresses of the servers are given.</p>
+<p>While the paper focuses on two paths, it is possible to apply this design to three or more paths. In the lab, we are going to implement the downloader in a more scalable way. Your downloader should be able to leverage three paths.</p>
+<p>Your downloader will be run in an emulated environment with exactly three CDNs and one client. In order to emulate a network environment with two or more CDN servers, we will take advantage of <a href="http://man7.org/linux/man-pages/man7/namespaces.7.html">Linux namespaces</a> to set up a virtual network on a Linux machine. Three CDN servers serve the same content. Your target in this lab is to reduce the downloading time for a given file. We will measure the downloading time of your implementation under varied network conditions.</p>
+<p>After finishing this lab, you are expected to:</p>
+<ul>
+<li>Get a taste of how the multipath solution boosts downloading performance.</li>
+<li>Be familiar with new features in HTTP/2, including stream multiplexing, flow control, and application-layer PING.</li>
+<li>Be capable of adding new features to an existing production-level library.</li>
+</ul>
+<h2 id="handout-instructions">Handout Instructions</h2>
+<p>This section will instruct you to set up the development environment on a Linux machine. We will evaluate your programs in the same environment.</p>
+<h3 id="download-the-http2-library">Download the HTTP/2 Library</h3>
+<p>Our lab is based on a mature HTTP/2 Library, named <a href="https://github.com/h2o/h2o">H2O</a>. After building the library on your Linux machine, you can:</p>
+<ul>
+<li>Follow the <a href="https://github.com/h2o/h2o/wiki">Wiki</a> to run the static content server. When setting up the SSL (443 port), you can create a self-signed certificate and disable certificate verification on the client.</li>
+<li>Develop your multipath downloader with the help of the library. See <a href="">Hints on Implementation</a> for details.</li>
+</ul>
+<h3 id="emulate-network-condition">Emulate Network Condition</h3>
+<p>Here we introduce two tools: NetEm and Mahimahi.</p>
+<p><a href="http://man7.org/linux/man-pages/man8/tc-netem.8.html">NetEm</a> is an enhancement of the Linux traffic control facilities that allow adding delay, packet loss, duplication and more other characteristics to packets outgoing from a selected network interface.</p>
+<p><a href="http://mahimahi.mit.edu">Mahimahi</a> is a set of lightweight tools that can emulate network conditions. Refer to the paper <a href=""><em>Mahimahi: Accurate Record-and-Replay for HTTP</em></a> (Netravali et al.) for a better understanding of how it works. You can find some network condition traces <a href="https://github.com/ravinet/mahimahi/tree/master/traces">here</a>.</p>
+<h3 id="create-a-virtual-network">Create a Virtual Network</h3>
+<p>Again, <a href="">vnetUtils</a> is our good friend. You may find its usage in the handout of lab2.</p>
+<p>In lab3, you can create a virtual network by running <code>makeVNet</code> with the following configuration (note that the first and the last two blank lines are left intentionally):</p>
+<pre><code>
+3
+0 1 10.100.1
+0 2 10.100.2
+0 3 10.100.3
+
+</code></pre>
+<p>By now, in addition to the default namespace, you have already set up three virtual network namespaces. This can be verified by running the command <code>ip netns list</code>. You can run a content server in each network namespace, and your downloader in the default namespace.</p>
+<p>The aforementioned configuration is just an example. When testing your downloader, you can create virtual networks with any topologies.</p>
+<h2 id="tasks">Tasks</h2>
+<h3 id="programming-task-30">Programming Task (30%)</h3>
+<p>Your downloader should work after receiving these arguments:</p>
+<ul>
+<li>Three servers’ IP addresses <code>&lt;host#1&gt; &lt;host#2&gt; &lt;host#3&gt;</code>.</li>
+<li><code>-t &lt;path&gt;</code>: the <strong>absolute</strong> file path on the CDN server. In other words, you can send a request <code>https://&lt;host#i&gt;&lt;path&gt;</code> to download the file. <strong>You oughtn’t to verify the server certificates.</strong></li>
+<li><code>-o &lt;file&gt;</code>: save the download to <code>&lt;file&gt;</code>.</li>
+</ul>
+<p>These are possible inputs (your downloader is <code>h2o-mphttp</code>):</p>
+<pre><code>$ ./h2o-mphttp 10.100.1.2 10.100.2.2 10.100.3.2 -o 2M.bin -t /2M_file
+$ ./h2o-mphttp 10.100.1.2 -t /dir1/dir2/hello.flv 10.100.2.2 10.100.3.2 -o ./hello.flv
+$ ./h2o-mphttp -o /tmp/hello.flv 10.100.3.2 10.100.1.2 10.100.2.2 -t /dir1/dir2/hello.flv</code></pre>
+<p>We recommend <a href="http://man7.org/linux/man-pages/man3/getopt.3.html">getopt()</a> here, a function that parses the command-line arguments.</p>
+<h4 id="test-and-evaluation">Test and Evaluation</h4>
+<p>The grading of the final hand-in will be based on the download time your downloader takes on the given traces. Each trace contains three bandwidth and delay profiles used to specify the network condition (imposed by Mahimahi), one for each CDN server. Final evaluation traces are kept secret.</p>
+<h3 id="writing-task-30">Writing Task (30%)</h3>
+<p>Describe your implementation:</p>
+<ul>
+<li>How do you estimate the bandwidth and the delay of a path?</li>
+<li>How do you assign jobs to the three paths?</li>
+<li>What features (pipelining, eliminating tail byes, etc.) do you implement? And how do you implement them? You are encouraged to write down other design aspects of your implementation.</li>
+</ul>
+<p>In addition to the questions above, Comments and ideas on the multipath HTTP solution are also welcomed!</p>
+<h3 id="drawing-task-40">Drawing Task (40%)</h3>
+<p>You are required to draw some figures to prove that your downloader does work:</p>
+<ul>
+<li>under static network conditions</li>
+<li>under varying bandwidth conditions (you can use the <a href="https://github.com/ravinet/mahimahi/tree/master/traces">traces</a> provided by Mahimahi)</li>
+<li>with a high-bandwidth path and two low-bandwidth paths</li>
+<li>with a short-delay path and two long-delay paths</li>
+</ul>
+<p>You are encouraged to submit other figures that you find interesting.</p>
+<p>Here are two powerful plotting tools. You can choose other tools at your convenience.</p>
+<ul>
+<li><a href="http://www.gnuplot.info">Gnuplot</a>: a portable command-line driven graphing utility for Linux, OS/2, MS Windows, OSX, VMS, and many other platforms.</li>
+<li><a href="https://matplotlib.org/index.html">Matplotlib</a>: a Python 2D plotting library which produces publication quality figures in a variety of hardcopy formats and interactive environments across platforms.</li>
+</ul>
+<p>Here is an example using Gnuplot (Note that the example only uses two paths, but your implementation should use three paths):</p>
+<pre><code>$ cat plot.gnu
+set terminal png transparent enhanced font &quot;arial,10&quot; fontscale 1.0 size 600, 400 
+set output &#39;gnuplot.png&#39;
+set style increment default
+set style data lines
+set xlabel &#39;time elapsed (ms)&#39;
+set ylabel &#39;byte range (Kb)&#39;
+plot [0:1600][0:2200] &quot;1.dat&quot; title &#39;1&#39; with points, &quot;2.dat&quot; title &#39;2&#39; with points 
+$ head 1.dat 
+0 0
+64 16
+77 32
+91 48
+102 63
+117 79
+130 95
+145 111
+159 127
+172 143
+$ gnuplot -c plot.gnu </code></pre>
+<p>Result:</p>
+<figure>
+<img src="assets/gnuplot.png" alt="output copy" /><figcaption>output copy</figcaption>
+</figure>
+<h2 id="hints-on-implementation">Hints on Implementation</h2>
+<h3 id="rfcs-are-important">RFCs are Important</h3>
+<ul>
+<li><a href="https://httpwg.org/specs/rfc7233.html">RFC 2616</a>: Hypertext Transfer Protocol (HTTP/1.1): Range Requests</li>
+<li><a href="https://httpwg.org/specs/rfc2818.html">RFC 2818</a>: HTTP Over TLS</li>
+<li><a href="https://httpwg.org/specs/rfc7540.html">RFC 7540</a>: Hypertext Transfer Protocol Version 2 (HTTP/2)</li>
+<li><a href="https://httpwg.org/specs/rfc7639.html">RFC 7639</a>: The ALPN HTTP Header Field</li>
+</ul>
+<p>In this lab, you don’t have to follow the RFC strictly, but your downloader should be able to communicate with the H2O static content server.</p>
+<h3 id="where-to-start">Where to Start</h3>
+<p>In H2O, you may find these codes useful:</p>
+<ul>
+<li><code>/src/httpclient.c</code>: A good starting point. Try to build and run it. Use <code>-k</code> option to disable certificate verification. You can build the downloader on the top of this file.</li>
+<li><code>/lib/common/httpclient.c</code>: How to connect to a server</li>
+<li><code>/lib/common/http2client.c</code>: HTTP/2 functionalities</li>
+<li><code>/lib/common/socket/evloop.c.h</code>: Event-driven programming model</li>
+<li><code>/deps/klib/khash.h</code>: A standalone and lightweight C library implementing generic <a href="https://en.wikipedia.org/wiki/Hash_table">hash table</a> with open addressing. See <a href="http://attractivechaos.github.io/klib/#About">here</a> for details.</li>
+</ul>
+<h2 id="handin-instructions">Handin Instructions</h2>
+<p>In this lab, you should submit a directory named <code>lab3</code> containing the following items in an archive named <code>lab3-[your student ID]-[your name].tar</code>:</p>
+<ul>
+<li><code>src/</code>: Source code of your programs (<a href="">Programming Tasks</a>)</li>
+<li><code>bin/h2o-mphttp</code>: Your downloader in binary executable format, which can run on Ubuntu.(<a href="">Programming Tasks</a>)</li>
+<li><code>report.pdf</code>: A single document that answers the questions in <a href="">Writing Tasks</a></li>
+<li><code>plot/</code>: Figures showing that your downloader does work. (<a href="">Drawing Tasks</a>)</li>
+</ul>
+<p>Please send an email with title <code>lab3-[your student ID]-[your name]</code> to <a href="mailto:kenuo.xu@pku.edu.cn">kenuo.xu@pku.edu.cn</a>. Missing the deadlines incurs a penalty.</p>
